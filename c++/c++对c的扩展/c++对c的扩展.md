@@ -1,3 +1,9 @@
+
+
+
+
+
+
 ##          C++对C的扩展  
 
 ####  ::作用域运算符  
@@ -2395,3 +2401,1021 @@ int main(){
 
 ###### this指针工作原理
 
+通过上例我们知道，c++的数据和操作也是分开存储，并且每一个非内联成员函数(non-inline member function)只会诞生一份函数实例，也就是说多个同类型的对象会共用一块代码
+
+那么问题是：这一块代码是如何区分那个对象调用自己的呢？
+
+c++通过提供特殊的对象指针，this指针，解决上述问题。this指针指向被调用的成员函数所属的对象。
+
+　      c++规定，this指针是隐含在对象成员函数内的一种指针。当一个对象被创建后，它的每一个成员函数都含有一个系统自动生成的隐含指针this，用以保存这个对象的地址，也就是说虽然我们没有写上this指针，编译器在编译的时候也是会加上的。因此this也称为“指向本对象的指针”，this指针并不是对象的一部分，不会影响sizeof(对象)的结果。
+
+ 　this指针是C++实现封装的一种机制，它将对象和该对象调用的成员函数连接在一起，在外部看来，每一个对象都拥有自己的函数成员。一般情况下，并不写this，而是让系统进行默认设置。
+
+​     **this指针永远指向当前对象**。  
+
+成员函数通过this指针即可知道操作的是那个对象的数据。**This指针是一种隐含指针，它隐含于每个类的非静态成员函数中。This指针无需定义，直接使用即可**
+
+注意：**静态成员函数内部没有this指针，静态成员函数不能操作非静态成员变量。**
+
+![](04.png)
+
+######  this指针的使用
+
+当形参和成员变量同名时，可用this指针来区分
+
+在类的非静态成员函数中返回对象本身，可使用return *this.
+
+```c++
+class Person{
+public:
+	//1. 当形参名和成员变量名一样时，this指针可用来区分
+	Person(string name,int age){
+		//name = name;
+		//age = age; //输出错误
+		this->name = name;
+		this->age = age;
+	}
+	//2. 返回对象本身的引用
+	//重载赋值操作符
+	//其实也是两个参数，其中隐藏了一个this指针
+	Person PersonPlusPerson(Person& person){
+		string newname = this->name + person.name;
+		int newage = this->age + person.age;
+		Person newperson(newname, newage);
+		return newperson;
+	}
+	void ShowPerson(){
+		cout << "Name:" << name << " Age:" << age << endl;
+	}
+public:
+	string name;
+	int age;
+};
+
+//3. 成员函数和全局函数(Perosn对象相加)
+Person PersonPlusPerson(Person& p1,Person& p2){
+	string newname = p1.name + p2.name;
+	int newage = p1.age + p2.age;
+	Person newperson(newname,newage);
+	return newperson;
+}
+
+int main(){
+
+	Person person("John",100);
+	person.ShowPerson();
+
+	cout << "---------" << endl;
+	Person person1("John",20);
+	Person person2("001", 10);
+	//1.全局函数实现两个对象相加
+	Person person3 = PersonPlusPerson(person1, person2);
+	person1.ShowPerson();
+	person2.ShowPerson();
+	person3.ShowPerson();
+	//2. 成员函数实现两个对象相加
+	Person person4 = person1.PersonPlusPerson(person2);
+	person4.ShowPerson();
+
+	system("pause");
+	return EXIT_SUCCESS;
+}
+
+```
+
+
+
+###### const修饰成员函数
+
+- 用const修饰的成员函数时，const修饰this指针指向的内存区域，成员函数体内不可以修改本类中的任何普通成员变量
+
+- 当成员变量类型符前用mutable修饰时例外。
+
+  ```c++
+  //const修饰成员函数
+  class Person{
+  public:
+  	Person(){
+  		this->mAge = 0;
+  		this->mID = 0;
+  	}
+  	//在函数括号后面加上const,修饰成员变量不可修改,除了mutable变量
+  	void sonmeOperate() const{
+  		//this->mAge = 200; //mAge不可修改
+  		this->mID = 10;
+  	}
+  	void ShowPerson(){
+  		cout << "ID:" << mID << " mAge:" << mAge << endl;
+  	}
+  private:
+  	int mAge;
+  	mutable int mID;
+  };
+  
+  int main(){
+  
+  	Person person;
+  	person.sonmeOperate();
+  	person.ShowPerson();
+  
+  	system("pause");
+  	return EXIT_SUCCESS;
+  }
+  
+  ```
+
+  ######  
+
+  
+
+  ###### const修饰对象(常对象)
+
+-  常对象只能调用const的成员函数
+
+- 常对象可访问 const 或非 const 数据成员，不能修改，除非成员用mutable修饰
+
+  ```c++
+  class Person{
+  public:
+  	Person(){
+  		this->mAge = 0;
+  		this->mID = 0;
+  	}
+  	void ChangePerson() const{
+  		mAge = 100;
+  		mID = 100;
+  	}
+  	void ShowPerson(){
+          this->mAge = 1000;
+  		cout << "ID:" << this->mID << " Age:" << this->mAge << endl;
+  	}
+  
+  public:
+  	int mAge;
+  	mutable int mID;
+  };
+  
+  void test(){	
+  	const Person person;
+  	//1. 可访问数据成员
+  	cout << "Age:" << person.mAge << endl;
+  	//person.mAge = 300; //不可修改
+  	person.mID = 1001; //但是可以修改mutable修饰的成员变量
+  	//2. 只能访问const修饰的函数
+  	//person.ShowPerson();
+  	person.ChangePerson();
+  }
+  
+  ```
+
+  
+
+### 友元
+
+类的主要特点之一是数据隐藏，即类的私有成员无法在类的外部(作用域之外)访问。但是，有时候需要在类的外部访问类的私有成员，怎么办？
+
+解决方法是使用友元函数，**友元函数是一种特权函数，c++允许这个特权函数访问私有成员**。这一点从现实生活中也可以很好的理解：
+
+比如你的家，有客厅，有你的卧室，那么你的客厅是Public的，所有来的客人都可以进去，但是你的卧室是私有的，也就是说只有你能进去，但是呢，你也可以允许你的闺蜜好基友进去。
+
+程序员可以把一**个全局函数、某个类中的成员函数、甚至整个类声明为友元**。
+
+#### 友元语法
+
+- friend关键字只出现在声明处
+
+-  其他类、类成员函数、全局函数都可声明为友元
+
+-  友元函数不是类的成员，不带this指针
+
+- 友元函数可访问对象任意成员属性，包括私有属性
+
+```c++
+class Building;
+//友元类
+class MyFriend{
+public:
+	//友元成员函数
+	void LookAtBedRoom(Building& building);
+	void PlayInBedRoom(Building& building);
+};
+class Building{
+	//全局函数做友元函数
+	friend void CleanBedRoom(Building& building);
+#if 0
+	//成员函数做友元函数
+	friend void MyFriend::LookAtBedRoom(Building& building);
+	friend void MyFriend::PlayInBedRoom(Building& building);
+#else	
+	//友元类
+	friend class MyFriend;
+#endif
+public:
+	Building();
+public:
+	string mSittingRoom;
+private:
+	string mBedroom;
+};
+
+void MyFriend::LookAtBedRoom(Building& building){
+	cout << "我的朋友参观" << building.mBedroom << endl;
+}
+void MyFriend::PlayInBedRoom(Building& building){
+	cout << "我的朋友玩耍在" << building.mBedroom << endl;
+}
+
+//友元全局函数
+void CleanBedRoom(Building& building){
+	cout << "友元全局函数访问" << building.mBedroom << endl;
+}
+
+Building::Building(){
+	this->mSittingRoom = "客厅";
+	this->mBedroom = "卧室";
+}
+
+int main(){
+
+	Building building;
+	MyFriend myfriend;
+
+	CleanBedRoom(building);
+	myfriend.LookAtBedRoom(building);
+	myfriend.PlayInBedRoom(building);
+
+	system("pause");
+	return EXIT_SUCCESS;
+}
+
+```
+
+**[友元类注意]**
+
+1．友元关系不能被继承。
+
+2．友元关系是单向的，类A是类B的朋友，但类B不一定是类A的朋友。
+
+友元关系不具有传递性。类B是类A的朋友，类C是类B的朋友，但类C不一定是类A的朋友。
+
+**思考: c++是纯面向对象的吗？**
+
+  如果一个类被声明为friend,意味着它不是这个类的成员函数，却可以修改这个类的私有成员，而且必须列在类的定义中，因此他是一个特权函数。c++不是完全的面向对象语言，而只是一个混合产品。增加friend关键字只是用来解决一些实际问题，这也说明这种语言是不纯的。毕竟c++设计的目的是为了实用性，而不是追求理想的抽象。                              --- Thinking in C++  
+
+### 运算符重载
+
+####  运算符重载基本概念
+
+运算符重载，就是对已有的运算符重新进行定义，[赋予](http://baike.baidu.com/view/483609.htm)其另一种功能，以适应不同的数据类型
+
+​    **运算符重载(operator overloading)只是一种”语法上的方便”,也就是它只是另一种函数调用的方式。**  
+
+在c++中，可以定义一个处理类的新运算符。这种定义很像一个普通的函数定义，只是函数的名字由关键字operator及其紧跟的运算符组成。差别仅此而已。它像任何其他函数一样也是一个函数，当编译器遇到适当的模式时，就会调用这个函数。
+
+#### 运算符重载碰上友元函数
+
+友元函数是一个全局函数，和我们上例写的全局函数类似，只是友元函数可以访问某个类私有数据。
+
+**案例: 重载左移操作符(<<),使得cout可以输出对象。**
+
+
+
+```c++
+class Person{
+	friend ostream& operator<<(ostream& os, Person& person);
+public:
+	Person(int id,int age){
+		mID = id;
+		mAge = age;
+	}
+private:
+	int mID;
+	int mAge;
+};
+
+ostream& operator<<(ostream& os, Person& person){
+	os << "ID:" << person.mID << " Age:" << person.mAge;
+	return os;
+}
+
+int main(){
+
+	Person person(1001, 30);
+	//cout << person; //cout.operator+(person)
+	cout << person << " | " << endl;
+
+	return EXIT_SUCCESS;
+}
+
+```
+
+#### 可重载的运算符
+
+几乎C中所有的运算符都可以重载，但运算符重载的使用时相当受限制的。**特别是不能使用C中当前没有意义的运算符**(例如用**求幂)不**能改变运算符优先级，不能改变运算符的参数个数**。这样的限制有意义，否则，所有这些行为产生的运算符只会混淆而不是澄清寓语意。
+
+![](05.png)
+
+
+
+#### 自增自减(++/--)运算符重载
+
+
+
+重载的++和--运算符有点让人不知所措，因为我们总是希望能根据它们出现在所作用对象的前面还是后面来调用不同的函数。解决办法很简单，例如当编译器看到++a(前置++)，它就调用operator++(a),当编译器看到a++（后置++），它就会去调用operator++(a,int).
+
+```c++
+class Complex{
+	friend ostream& operator<<(ostream& os,Complex& complex){
+		os << "A:" << complex.mA << " B:" << complex.mB << endl;
+		return os;
+	}
+public:
+	Complex(){
+		mA = 0;
+		mB = 0;
+	}
+	//重载前置++
+	Complex& operator++(){
+		mA++;
+		mB++;
+		return *this;
+	}
+	//重载后置++
+	Complex operator++(int){	
+		Complex temp;
+		temp.mA = this->mA;
+		temp.mB = this->mB;
+		mA++;
+		mB++;
+		return temp;
+	}
+	//前置--
+	Complex& operator--(){
+		mA--;
+		mB--;
+		return *this;
+	}
+	//后置--
+	Complex operator--(int){
+		Complex temp;
+		temp.mA = mA;
+		temp.mB = mB;
+		mA--;
+		mB--;
+		return temp;
+	}
+	void ShowComplex(){
+		cout << "A:" << mA << " B:" << mB << endl;
+	}
+private:
+	int mA;
+	int mB;
+};
+
+void test(){
+	Complex complex;
+	complex++;
+	cout << complex;
+	++complex;
+	cout << complex;
+
+	Complex ret = complex++;
+	cout << ret;
+	cout << complex;
+
+	cout << "------" << endl;
+	ret--;
+	--ret;
+	cout << "ret:" << ret;
+	complex--;
+	--complex;
+	cout << "complex:" << complex;
+}
+
+```
+
+**优先使用++和--的标准形式，优先调用前置++。**
+
+如果定义了++c，也要定义c++，递增操作符比较麻烦，因为他们都有前缀和后缀形式，而两种语义略有不同。重载operator++和operator--时应该模仿他们对应的内置操作符。
+
+对于++和--而言，后置形式是先返回，然后对象++或者--，返回的是对象的原值。前置形式，对象先++或--，返回当前对象，返回的是新对象。其标准形式为:
+
+![](06.png)
+
+调用代码时候，**要优先使用前缀形式**，除非确实需要后缀形式返回的原值，前缀和后缀形**式语义上是等价的**，输入工作量也相当，只是效率经常会略高一些，由于前缀形式**少创建了一个临时对象**。
+
+#### 指针运算符(*、->)重载
+
+```c++
+class Person{
+public:
+	Person(int param){
+		this->mParam = param;
+	}
+	void PrintPerson(){
+		cout << "Param:" << mParam << endl;
+	}
+private:
+	int mParam;
+};
+
+class SmartPointer{
+public:
+	SmartPointer(Person* person){
+		this->pPerson = person;
+	}
+	//重载指针的->、*操作符
+	Person* operator->(){
+		return pPerson;
+	}
+	Person& operator*(){
+		return *pPerson;
+	}
+	~SmartPointer(){
+		if (pPerson != NULL){
+			delete pPerson;
+		}
+	}
+public:
+	Person* pPerson;
+};
+
+void test01(){
+	
+	//Person* person = new Person(100);
+	//如果忘记释放，那么就会造成内存泄漏
+
+	SmartPointer pointer(new Person(100));
+	pointer->PrintPerson();
+}
+
+```
+
+#### 赋值(=)运算符重载
+
+赋值符常常初学者的混淆。这是毫无疑问的，因为’=’在编程中是最基本的运算符，**可以进行赋值操作，也能引起拷贝构造函数的调用**。
+
+```c++
+class Person{
+	friend ostream& operator<<(ostream& os,const Person& person){
+		os << "ID:" << person.mID << " Age:" << person.mAge << endl;
+		return os;
+	}
+public:
+	Person(int id,int age){
+		this->mID = id;
+		this->mAge = age;
+	}
+	//重载赋值运算符
+	Person& operator=(const Person& person){
+		this->mID = person.mID;
+		this->mAge = person.mAge;
+		return *this;
+	}
+private:
+	int mID;
+	int mAge;
+};
+
+//1. =号混淆的地方
+void test01(){
+	Person person1(10, 20);
+	Person person2 = person1; //调用拷贝构造
+	//如果一个对象还没有被创建，则必须初始化，也就是调用构造函数
+	//上述例子由于person2还没有初始化，所以会调用构造函数
+	//由于person2是从已有的person1来创建的，所以只有一个选择
+	//就是调用拷贝构造函数
+	person2 = person1; //调用operator=函数
+	//由于person2已经创建，不需要再调用构造函数，这时候调用的是重载的赋值运算符
+}
+//2. 赋值重载案例
+void test02(){
+	Person person1(20, 20);
+	Person person2(30, 30);
+	cout << "person1:" << person1;
+	cout << "person2:" << person2;
+	person2 = person1;
+	cout << "person2:" << person2;
+}
+//常见错误，当准备给两个相同对象赋值时，应该首先检查一下这个对象是否对自身赋值了
+//对于本例来讲，无论如何执行这些赋值运算都是无害的，但如果对类的实现进行修改，那么将会出现差异；
+//3. 类中指针
+class Person2{
+	friend ostream& operator<<(ostream& os, const Person2& person){
+		os << "Name:" << person.pName << " ID:" << person.mID << " Age:" << person.mAge << endl;
+		return os;
+	}
+public:
+	Person2(char* name,int id, int age){
+		this->pName = new char[strlen(name) + 1];
+		strcpy(this->pName, name);
+		this->mID = id;
+		this->mAge = age;
+	}
+#if 1
+	//重载赋值运算符
+	Person2& operator=(const Person2& person){
+
+		//注意:由于当前对象已经创建完毕，那么就有可能pName指向堆内存
+		//这个时候如果直接赋值，会导致内存没有及时释放
+		if (this->pName != NULL){
+			delete[] this->pName;
+		}
+
+		this->pName = new char[strlen(person.pName) + 1];
+		strcpy(this->pName,person.pName);
+		this->mID = person.mID;
+		this->mAge = person.mAge;
+		return *this;
+	}
+#endif
+	//析构函数
+	~Person2(){
+		if (this->pName != NULL){
+			delete[] this->pName;
+		}
+	}
+private:
+	char* pName;
+	int mID;
+	int mAge;
+};
+
+void test03(){
+	Person2 person1("John",20, 20);
+	Person2 person2("Edward",30, 30);
+	cout << "person1:" << person1;
+	cout << "person2:" << person2;
+	person2 = person1;
+	cout << "person2:" << person2;
+}
+
+```
+
+
+
+如果没有重载赋值运算符，编译器会自动创建默认的赋值运算符重载函数。行为类似默认拷贝构造，进行简单值拷贝。
+
+#### 等于和不等于(==、!=)运算符重载
+
+
+
+```c++
+class Complex{
+public:
+	Complex(char* name,int id,int age){
+		this->pName = new char[strlen(name) + 1];
+		strcpy(this->pName, name);
+		this->mID = id;
+		this->mAge = age;
+	}
+	//重载==号操作符
+	bool operator==(const Complex& complex){
+		if (strcmp(this->pName,complex.pName) == 0 && 
+		    this->mID == complex.mID && 
+			this->mAge == complex.mAge){
+			return true;
+		}
+		return false;
+	}
+	//重载!=操作符
+	bool operator!=(const Complex& complex){
+		if (strcmp(this->pName, complex.pName) != 0 || 
+		    this->mID != complex.mID || 
+			this->mAge != complex.mAge){
+			return true;
+		}
+		return false;
+	}
+	~Complex(){
+		if (this->pName != NULL){
+			delete[] this->pName;
+		}
+	}
+private:
+	char* pName;
+	int mID;
+	int mAge;
+};
+void test(){
+	Complex complex1("aaa", 10, 20);
+	Complex complex2("bbb", 10, 20);
+	if (complex1 == complex2){ cout << "相等!" << endl; }
+	if (complex1 != complex2){ cout << "不相等!" << endl; }
+}
+
+```
+
+####  函数调用符号()重载
+
+```c++
+class Complex{
+public:
+	int Add(int x,int y){
+		return x + y;
+	}
+	int operator()(int x,int y){
+		return x + y;
+	}
+};
+void test01(){
+	Complex complex;
+	cout << complex.Add(10,20) << endl;
+	//对象当做函数来调用
+	cout << complex(10, 20) << endl;
+}
+
+```
+
+
+
+#### 不要重载&&、||
+
+不能重载operator&& 和 operator|| 的原因是，无法在这两种情况下实现内置操作符的完整语义。说得更具体一些，内置版本版本特殊之处在于：内置版本的&&和||首先计算左边的表达式，如果这完全能够决定结果，就无需计算右边的表达式了--而且能够保证不需要。我们都已经习惯这种方便的特性了。
+
+我们说操作符重载其实是另一种形式的函数调用而已，对于函数调用总是在函数执行之前对所有参数进行求值。
+
+```c++
+class Complex{
+public:
+	Complex(int flag){
+		this->flag = flag;
+	}
+	Complex& operator+=(Complex& complex){
+		this->flag = this->flag + complex.flag;
+		return *this;
+	}
+	bool operator&&(Complex& complex){
+		return this->flag && complex.flag;
+	}
+public:
+	int flag;
+};
+int main(){
+
+	Complex complex1(0);  //flag 0 
+	Complex complex2(1);  //flag 1
+
+	//原来情况，应该从左往右运算，左边为假，则退出运算，结果为假
+	//这边却是，先运算（complex1+complex2），导致，complex1的flag变为complex1+complex2的值， complex1.a = 1
+	// 1 && 1
+	//complex1.operator&&(complex1.operator+=(complex2))
+	if (complex1 && (complex1 += complex2)){   
+		cout << "真!" << endl;
+	}
+	else{
+		cout << "假!" << endl;
+	}
+
+	return EXIT_SUCCESS;
+}
+
+```
+
+根据内置&&的执行顺序，我们发现这个案例中执行顺序并不是从左向右，而是先右后左，这就是不满足我们习惯的特性了。**由于complex1 += complex2先执行，导致complex1 本身发生了变化，初始值是0，现在经过+=运算变成1,1 && 1输出了真。**
+
+#### 符号重载总结
+
+-  **=**, **[]**, **()** 和 **->** 操作符只能通过成员函数进行重载 
+
+-  **<<** 和 **>>**只能通过**全局函数配合友元函数进行重载**
+
+-  不要重载 **&&** 和 **||** 操作符，因为无法实现短路规则
+
+#### 强化训练_字符串类封装
+
+```c++
+#define _CRT_SECURE_NO_WARNINGS
+#pragma once
+#include <iostream>
+using namespace std;
+
+class MyString
+{
+	friend ostream& operator<< (ostream  & out, MyString& str);
+	friend istream& operator>>(istream& in, MyString& str);
+
+public:
+	MyString(const char *);
+	MyString(const MyString&);
+	~MyString();
+
+	char& operator[](int index); //[]重载
+
+	//=号重载
+	MyString& operator=(const char * str);
+	MyString& operator=(const MyString& str); 
+
+	//字符串拼接 重载+号
+	MyString operator+(const char * str );
+	MyString operator+(const MyString& str);
+
+	//字符串比较
+	bool operator== (const char * str);
+	bool operator== (const MyString& str);
+private:
+	char * pString; //指向堆区空间
+	int m_Size; //字符串长度 不算'\0'
+};
+#include "MyString.h"
+
+//左移运算符
+ostream& operator<< (ostream & out, MyString& str)
+{
+	out << str.pString;
+	return out;
+}
+//右移运算符
+istream& operator>>(istream& in, MyString& str)
+{
+	//先将原有的数据释放
+	if (str.pString != NULL)
+	{
+		delete[] str.pString;
+		str.pString = NULL;
+	}
+	char buf[1024]; //开辟临时的字符数组，保存用户输入内容
+	in >> buf;
+
+	str.pString = new char[strlen(buf) + 1];
+	strcpy(str.pString, buf);
+	str.m_Size = strlen(buf);
+
+	return in;
+}
+
+//构造函数
+MyString::MyString(const char * str)
+{
+	this->pString = new char[strlen(str) + 1];
+	strcpy(this->pString, str);
+	this->m_Size = strlen(str);
+}
+
+//拷贝构造
+MyString::MyString(const MyString& str)
+{
+	this->pString = new char[strlen(str.pString) + 1];
+	strcpy(this->pString, str.pString);
+	this->m_Size = str.m_Size;
+}
+//析构函数
+MyString::~MyString()
+{
+	if (this->pString!=NULL)
+	{
+		delete[]this->pString;
+		this->pString = NULL;
+	}
+}
+
+char& MyString::operator[](int index)
+{
+	return this->pString[index];
+}
+
+MyString& MyString::operator=(const char * str)
+{
+	if (this->pString != NULL){
+		delete[] this->pString;
+		this->pString = NULL;
+	}
+	this->pString = new char[strlen(str) + 1];
+	strcpy(this->pString, str);
+	this->m_Size = strlen(str);
+	return *this;
+}
+
+MyString& MyString::operator=(const MyString& str)
+{
+	if (this->pString != NULL){
+		delete[] this->pString;
+		this->pString = NULL;
+	}
+	this->pString = new char[strlen(str.pString) + 1];
+	strcpy(this->pString, str.pString);
+	this->m_Size = str.m_Size;
+	return *this;
+}
+
+
+MyString MyString::operator+(const char * str)
+{
+	int newsize = this->m_Size + strlen(str) + 1;
+	char *temp = new char[newsize];
+	memset(temp, 0, newsize);
+	strcat(temp, this->pString);
+	strcat(temp, str);
+
+	MyString newstring(temp);
+	delete[] temp;
+
+	return newstring;
+}
+
+MyString MyString::operator+(const MyString& str)
+{
+	int newsize = this->m_Size + str.m_Size + 1;
+	char *temp = new char[newsize];
+	memset(temp, 0, newsize);
+	strcat(temp, this->pString);
+	strcat(temp, str.pString);
+
+	MyString newstring(temp);
+	delete[] temp;
+	return newstring;
+}
+
+bool MyString::operator==(const char * str)
+{
+	if (strcmp(this->pString, str) == 0 && strlen(str) == this->m_Size){
+		return true;
+	}
+
+	return false;
+}
+
+bool MyString::operator==(const MyString& str)
+{
+	if (strcmp(this->pString, str.pString) == 0 && str.m_Size == this->m_Size){
+		return true;
+	}
+
+	return false;
+}
+
+
+
+TestMyString.cpp
+void test01()
+{
+	MyString str("hello World");
+
+	cout << str << endl;
+
+	//cout << "请输入MyString类型字符串：" << endl;
+	//cin >> str;
+
+	//cout << "字符串为： " << str << endl;
+
+	//测试[]
+	cout << "MyString的第一个字符为：" << str[0] << endl;
+
+	//测试 =
+	MyString str2 = "^_^";
+	MyString str3 = "";
+	str3 = "aaaa";
+	str3 = str2;
+	cout << "str2 = " << str2 << endl;
+	cout << "str3 = " << str3 << endl;
+
+	//测试 +
+	MyString str4 = "我爱";
+	MyString str5 = "北京";
+	MyString str6 = str4 + str5;
+	MyString str7 = str6 + "天安门";
+
+	cout << str7 << endl;
+
+	//测试 == 
+	if (str6 == str7)
+	{
+		cout << "s6 与 s7相等" << endl;
+	}
+	else
+	{
+		cout << "s6 与 s7不相等" << endl;
+	}
+}
+
+
+```
+
+### 继承和派生
+
+#### 继承基本概念
+
+c++最重要的特征是代码重用，通过继承机制可以利用已有的数据类型来定义新的数据类型，新的类不仅拥有旧类的成员，还拥有新定义的成员。
+
+一个B类继承于A类，或称从类A派生类B。这样的话，类A成为基类（父类）， 类B成为派生类（子类）。
+
+派生类中的成员，包含两大部分：
+
+-  一类是从基类继承过来的，一类是自己增加的成员。
+-  从基类继承过过来的表现其共性，而新增的成员体现了其个性。
+
+#### 派生类定义
+
+```c++
+派生类定义格式：
+   Class 派生类名 :  继承方式 基类名{
+         //派生类新增的数据成员和成员函数
+   }
+
+```
+
+**三种继承方式：** 
+
+-  public ：  公有继承
+
+-  private ：  私有继承
+
+-  protected ： 保护继承
+
+**从继承源上分**： 
+
+-  单继承：指每个派生类只直接继承了一个基类的特征
+
+- 多继承：指多个基类派生出一个派生类的继承关系,多继承的派生类直接继承了不止一个基类的特征
+
+#### 派生类访问控制
+
+派生类继承基类，派生类拥有基类中全部成员变量和成员方法（**除了构造和析构之外的成员方法**），但是在派生类中，继承的成员并不一定能直接访问，不同的继承方式会导致不同的访问权限。
+
+派生类的访问权限规则如下：
+
+![](07.png)
+
+```c++
+//基类
+class A{
+public:
+	int mA;
+protected:
+	int mB;
+private:
+	int mC;
+};
+
+//1. 公有(public)继承
+class B : public A{
+public:
+	void PrintB(){
+		cout << mA << endl; //可访问基类public属性
+		cout << mB << endl; //可访问基类protected属性
+		//cout << mC << endl; //不可访问基类private属性
+	}  
+};
+class SubB : public B{
+	void PrintSubB(){
+		cout << mA << endl; //可访问基类public属性
+		cout << mB << endl; //可访问基类protected属性
+		//cout << mC << endl; //不可访问基类private属性
+	}
+};
+void test01(){
+
+	B b;
+	cout << b.mA << endl; //可访问基类public属性
+	//cout << b.mB << endl; //不可访问基类protected属性
+	//cout << b.mC << endl; //不可访问基类private属性
+}
+
+//2. 私有(private)继承
+class C : private A{
+public:
+	void PrintC(){
+		cout << mA << endl; //可访问基类public属性
+		cout << mB << endl; //可访问基类protected属性
+		//cout << mC << endl; //不可访问基类private属性
+	}
+};
+class SubC : public C{
+	void PrintSubC(){
+		//cout << mA << endl; //不可访问基类public属性
+		//cout << mB << endl; //不可访问基类protected属性
+		//cout << mC << endl; //不可访问基类private属性
+	}
+};
+void test02(){
+	C c;
+	//cout << c.mA << endl; //不可访问基类public属性
+	//cout << c.mB << endl; //不可访问基类protected属性
+	//cout << c.mC << endl; //不可访问基类private属性
+}
+//3. 保护(protected)继承
+class D : protected A{
+public:
+	void PrintD(){
+		cout << mA << endl; //可访问基类public属性
+		cout << mB << endl; //可访问基类protected属性
+		//cout << mC << endl; //不可访问基类private属性
+	}
+};
+class SubD : public D{
+	void PrintD(){
+		cout << mA << endl; //可访问基类public属性
+		cout << mB << endl; //可访问基类protected属性
+		//cout << mC << endl; //不可访问基类private属性
+	}
+};
+void test03(){
+	D d;
+	//cout << d.mA << endl; //不可访问基类public属性
+	//cout << d.mB << endl; //不可访问基类protected属性
+	//cout << d.mC << endl; //不可访问基类private属性
+}
+
+```
+
+#### 继承中的构造和析构
