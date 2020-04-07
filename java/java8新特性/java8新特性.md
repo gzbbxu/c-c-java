@@ -92,15 +92,223 @@ lambda 是一个匿名函数，我们可以把Lambda 表达式理解为一段可
 
 
 
+### **java常用接口**(四大核心函数式接口)
+
+| 函数式接口              | 参数类型 | 返回类型 | 用途                                                         |
+| ----------------------- | -------- | -------- | ------------------------------------------------------------ |
+| Consumer<T>消费型接>    | T        | void     | 对类型为T的对象应用操作，包含方法，<br>void accetp(T t)      |
+| Supplier<T>供给型接口   | 无       | T        | 返回类型为T的对象，包含方法：T get（）；                     |
+| Function<T,R>函数型接口 | T        | R        | 对类型为T的对象应用操作，并返回结果<br>结果是R类型的对象，包含方法：R apply(T t); |
+| Predicate<T>断定型接口  | T        | boolean  | 确定类型为T的对象是否满足约束，并返回boolean 值，包含方法boolean test(T  t) |
+
+```java
+package com.zkk.lambda;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+
+import org.junit.Test;
+/**
+ * java8内置 四大核心函数式接口
+ * @author gzbbxu
+ *Consume<T> 消费型接口
+ *   void accept(T t)
+ *   
+ *Suplier<T>：供给型接口
+ *T get
+ *Function<T,R> 函数型接口
+ * 	R apply(T t);
+ * 
+ *Predicate<T> 断言型接口
+ * boolean test(T t);
+ */
+public class TestLambda3 {
+	//Consume<T> 消费型接口 有去无回
+	@Test
+	public void test1(){
+		happy(100,m->System.out.println("--------"+m));
+	}
+	
+	public void happy(double money,Consumer<Double> conn){
+		conn.accept(money);
+	}
+	
+//	Suplier<T>：供给型接口  返回对象
+	@Test
+	public void test2(){
+		List<Integer> num = getNumberList(10,()->(int)(Math.random()*100));
+		for(Integer in : num){
+			System.out.println(in);
+		}
+	}
+	//需求，产生一些数，放入集合
+	public List<Integer> getNumberList(int num,Supplier<Integer> sup){
+		List<Integer> list =new ArrayList<Integer>();
+		for(int i = 0; i< num;i++){
+			list.add(sup.get());
+		}
+		
+		return list;
+		
+	}
+	
+	//函数型接口
+	//需求：处理字符串
+	public void test3(){
+		
+		strHandler(" fdsa ",(str)->str.trim());
+	}
+	public String strHandler(String str,Function<String,String> fun){
+		return fun.apply(str);
+	}
+	
+	//断言接口
+	//需求：将满足条件的字符串 放入集合中.
+	public void test4(){
+		List<String> strList  = Arrays.asList("ret","bb","dd","xx");
+		filterStr(strList,(str)->str.length()>=3);
+		
+	}
+	public List<String > filterStr(List<String> list,Predicate<String> pre){
+		List<String> strList = new ArrayList<>();
+		for(String str: strList){
+			if(pre.test(str)){
+				strList.add(str);
+			}
+		}
+		return strList;
+	}
+	
+}
+
+```
 
 
 
+### 方法引用和构造器引用
 
+```java
+package com.zkk.lambda;
 
+import java.io.PrintStream;
+import java.util.Comparator;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
+import org.junit.Test;
 
+/**
+ * 一：方法引用: 如果 lambda体中的内容，有方法已经实现了，我们可以使用“方法引用” （可以理解为方法引用是Lambda 表达式的另外一种表现形式）
+ * 
+ * 
+ * 主要有三种表现形式 对象::实力方法名 类::静态方法名 类::实例方法名
+ * 
+ * 
+ * 二:构造器引用
+ * 
+ * 格式: ClassName::new
+ * 注意： 需要调用的构造器参数列表，要与函数样式接口中的抽象方法的参数列表保持一致。
+ * 
+ * 三：数组引用
+ * Type::new
+ * 
+ * @author gzbbxu
+ *
+ */
+public class TestMethodRef {
+	//数组引用
+	@Test
+	public void test7(){
+		Function<Integer,String[]> fun = (x)->new String[x];
+		String[] srs = fun.apply(10);
+		System.out.println(srs.length);
+		
+		
+		Function<Integer,String[]> fun2 = String[]::new;
+		String[] sts2  = fun2.apply(20);
+		System.out.println(sts2.length);
+	}
 
+	// 构造器引用
+	@Test
+	public void test5() {
 
+		Supplier<Employee> sup = () -> new Employee("", 1, 1);
+		//构造器引用
+		Supplier<Employee> sup2 = Employee::new;
+		Employee emp = sup2.get();
+		System.out.println(emp);
+	}
+	@Test
+	public void test6(){
+		Function<Integer,Employee> fun = (x)->new Employee(x);
+		//有几个参数，就调用几个参数的 构造器
+		Function<Integer,Employee> fun2 = Employee::new;
+		
+		
+		Employee employee = fun2.apply(101);
+		System.out.println(employee);
+		
+		
+//		BiFunction<Integer, Integer, Employee> bf = Employee::new;
+		
+		
+	}
+
+	// 对象::实力方法名
+	@Test
+	public void test1() {
+		Consumer<String> con = (x) -> System.out.println(x);
+		PrintStream ps = System.out;
+
+		// 需要注意的是: 需要实现的接口类的抽象方法，参数列表和返回值类型，
+		// 要与当前调用的这个方法 的参数列表和返回值类型 保持一致
+		Consumer<String> con1 = ps::println;
+
+		Consumer<String> con2 = System.out::println;
+		con2.accept("hello");
+	}
+
+	@Test
+	public void test2() {
+
+		Employee emp = new Employee("11", 0, 0);
+		Supplier<String> sup = () -> emp.getName();
+		String str = sup.get();
+		System.out.println(str);
+
+		Supplier<Integer> sup2 = emp::getAge;
+		Integer num = sup2.get();
+		System.out.println(num);
+
+	}
+
+	// 静态方法
+	@Test
+	public void test3() {
+		Comparator<Integer> com = (x, y) -> Integer.compare(x, y);
+
+		Comparator<Integer> com2 = Integer::compare;
+	}
+
+	// 类 ::实例方法名
+	@Test
+	public void test4() {
+		BiPredicate<String, String> bp = (x, y) -> x.equals(y);
+		// 如果 第一个参数是这个方法的调用者，第二个参数是这个方法的调用参数时，我们就可以使用类名:：方法名
+		BiPredicate<String, String> bp2 = String::equals;
+	}
+
+}
+
+```
 
 
 
